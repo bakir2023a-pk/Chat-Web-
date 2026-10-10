@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat Web.gov.bd</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Firebase Web SDK (v9 Compatibility Mode for simple script integration) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(156, 163, 175, 0.3); border-radius: 9999px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(156, 163, 175, 0.5); }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-indigo-500 selection:text-white">
+
+  <!-- ================= AUTH SCREEN (INDEX / LOGIN) ================= -->
+  <div id="auth-screen" class="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950">
+    <div class="w-full max-full max-w-md bg-slate-800/80 backdrop-blur-xl border border-slate-700/60 rounded-2xl shadow-2xl overflow-hidden p-6 sm:p-8 space-y-6">
+      <div class="text-center space-y-2">
+        <div class="inline-flex items-center justify-center w-14 h-14 bg-indigo-600/20 text-indigo-400 rounded-2xl border border-indigo-500/30 shadow-inner mb-2">
+          <i data-lucide="message-square-code" class="w-7 h-7"></i>
+        </div>
+        <h1 class="text-2xl font-bold tracking-tight text-white">Chat Web Console</h1>
+        <p class="text-sm text-slate-400">Select portal access mode to enter chat workspace</p>
+      </div>
+
+      <!-- Auth Navigation Tabs -->
+      <div class="grid grid-cols-4 gap-1 p-1 bg-slate-900/80 rounded-xl border border-slate-800 text-xs font-semibold">
+        <button onclick="switchAuthTab('user')" id="tab-user" class="py-2 rounded-lg text-slate-300 hover:text-white transition active-tab">User</button>
+        <button onclick="switchAuthTab('mod')" id="tab-mod" class="py-2 rounded-lg text-slate-400 hover:text-white transition">Mod</button>
+        <button onclick="switchAuthTab('admin')" id="tab-admin" class="py-2 rounded-lg text-slate-400 hover:text-white transition">Admin</button>
+        <button onclick="switchAuthTab('super')" id="tab-super" class="py-2 rounded-lg text-slate-400 hover:text-white transition">Fast App</button>
+      </div>
+
+      <!-- Login Form -->
+      <form id="auth-form" onsubmit="handleAuthSubmit(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1">Display Username</label>
+          <div class="relative">
+            <i data-lucide="user" class="w-4 h-4 absolute left-3 top-3 text-slate-500"></i>
+            <input type="text" id="auth-username" required placeholder="e.g. Alex" class="w-full pl-9 pr-4 py-2.5 bg-slate-900/90 border border-slate-700 rounded-xl text-slate-200 placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition text-sm">
+          </div>
+        </div>
+
+        <div id="password-field-container">
+          <label class="block text-xs font-medium text-slate-400 mb-1" id="password-label">Password</label>
+          <div class="relative">
+            <i data-lucide="key-round" class="w-4 h-4 absolute left-3 top-3 text-slate-500"></i>
+            <input type="password" id="auth-password" placeholder="••••••••" class="w-full pl-9 pr-4 py-2.5 bg-slate-900/90 border border-slate-700 rounded-xl text-slate-200 placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition text-sm">
+          </div>
+          <p id="password-hint" class="text-[11px] text-amber-400/90 mt-1.5 hidden flex items-center gap-1">
+            <i data-lucide="shield-alert" class="w-3 h-3"></i> Require key <span class="font-mono bg-amber-950/80 px-1 py-0.5 rounded border border-amber-800/50">@Abdur1111</span> for Fast App
+          </p>
+        </div>
+
+        <button type="submit" id="auth-submit-btn" class="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-semibold rounded-xl transition shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 text-sm">
+          <span>Enter Workspace</span>
+          <i data-lucide="arrow-right" class="w-4 h-4"></i>
+        </button>
+      </form>
+
+      <!-- Quick Preset Buttons -->
+      <div class="pt-4 border-t border-slate-700/50">
+        <span class="block text-center text-[11px] text-slate-500 font-medium uppercase tracking-wider mb-2">Quick Test Profiles</span>
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <button onclick="fillPreset('SuperAdmin', '@Abdur1111', 'super')" class="py-1.5 px-2 bg-indigo-950/50 hover:bg-indigo-900/50 border border-indigo-800/40 rounded-lg text-indigo-300 font-medium transition text-left flex items-center gap-1.5">
+            <i data-lucide="zap" class="w-3 h-3 text-amber-400"></i> Fast App Admin
+          </button>
+          <button onclick="fillPreset('ModSarah', 'mod123', 'mod')" class="py-1.5 px-2 bg-emerald-950/50 hover:bg-emerald-900/50 border border-emerald-800/40 rounded-lg text-emerald-300 font-medium transition text-left flex items-center gap-1.5">
+            <i data-lucide="shield-check" class="w-3 h-3 text-emerald-400"></i> Normal Mod
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ================= DASHBOARD SCREEN ================= -->
+  <div id="dashboard-screen" class="hidden min-h-screen flex flex-col bg-slate-950">
+    
+    <!-- Top Header Navigation -->
+    <header class="h-16 border-b border-slate-800 bg-slate-900/90 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between z-20 sticky top-0">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 bg-indigo-600/20 border border-indigo-500/40 rounded-xl flex items-center justify-center text-indigo-400">
+          <i data-lucide="message-square-code" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h2 class="font-bold text-white text-base leading-tight">Chat Web</h2>
+            <span id="firebase-badge" class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Live Sync
+            </span>
+          </div>
+          <p class="text-xs text-slate-400 hidden sm:block">Connected to firebase project <span class="font-mono text-slate-300">chat-app-8b456</span></p>
+        </div>
+      </div>
+
+      <!-- Top Right Action Controls -->
+      <div class="flex items-center gap-2">
+        <button id="admin-panel-btn" onclick="toggleAdminPanel()" class="hidden py-1.5 px-3 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 rounded-xl font-medium text-xs transition flex items-center gap-1.5">
+          <i data-lucide="shield-alert" class="w-3.5 h-3.5"></i>
+          <span>Admin Console</span>
+        </button>
+
+        <button onclick="openPromoteModal()" class="py-1.5 px-3 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 rounded-xl font-medium text-xs transition flex items-center gap-1.5">
+          <i data-lucide="arrow-up-circle" class="w-3.5 h-3.5"></i>
+          <span>Promote User</span>
+        </button>
+
+        <div class="h-6 w-[1px] bg-slate-800 my-auto mx-1"></div>
+
+        <div class="flex items-center gap-2.5 bg-slate-800/80 py-1 px-2.5 rounded-xl border border-slate-700/60">
+          <div class="text-right hidden sm:block">
+            <div id="current-user-name" class="text-xs font-semibold text-slate-200">User</div>
+            <div id="current-user-role" class="text-[10px] font-bold uppercase tracking-wider text-indigo-400">Standard</div>
+          </div>
+          <button onclick="logout()" class="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition" title="Logout">
+            <i data-lucide="log-out" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Workspace Container -->
+    <div class="flex-1 flex overflow-hidden">
+      
+      <!-- Left Sidebar (Rooms & Direct Messages) -->
+      <aside class="w-64 sm:w-72 bg-slate-900 border-r border-slate-800 flex flex-col">
+        <!-- Rooms Section Header -->
+        <div class="p-4 border-b border-slate-800/80 flex items-center justify-between">
+          <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Chat Rooms</span>
+          <button onclick="createNewRoom()" class="p-1 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-indigo-400 transition" title="Create Room">
+            <i data-lucide="plus-circle" class="w-4 h-4"></i>
+          </button>
+        </div>
+
+        <!-- Room List -->
+        <div class="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1" id="rooms-list">
+          <!-- Dynamically populated -->
+        </div>
+
+        <!-- Online Users Directory -->
+        <div class="p-3 border-t border-slate-800/80 bg-slate-950/40">
+          <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-2">Active Users</span>
+          <div id="active-users-list" class="space-y-1.5 max-h-36 overflow-y-auto custom-scrollbar">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+      </aside>
+
+      <!-- Center Chat Section -->
+      <main class="flex-1 flex flex-col bg-slate-950/60 relative">
+        
+        <!-- Active Room Header -->
+        <div class="h-14 border-b border-slate-800 bg-slate-900/40 px-6 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <i data-lucide="hash" class="w-5 h-5 text-indigo-400"></i>
+            <div>
+              <h3 id="current-room-title" class="font-bold text-slate-200 text-sm"># general</h3>
+              <p id="current-room-desc" class="text-xs text-slate-500">Public discussion room for everyone</p>
+            </div>
+          </div>
+          <div id="room-actions" class="flex items-center gap-2">
+            <!-- Room options if permitted -->
+          </div>
+        </div>
+
+        <!-- Chat Messages Container -->
+        <div id="chat-messages" class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-4">
+          <!-- Messages will render dynamically here -->
+        </div>
+
+        <!-- Message Input Area -->
+        <div class="p-4 border-t border-slate-800 bg-slate-900/60">
+          <form id="chat-input-form" onsubmit="sendMessage(event)" class="flex gap-2">
+            <input type="text" id="chat-message-input" autocomplete="off" placeholder="Type message in #general..." class="flex-1 bg-slate-900 border border-slate-700/80 rounded-xl px-4 py-2.5 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50">
+            <button type="submit" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white rounded-xl font-medium text-sm transition flex items-center gap-2 shadow-lg shadow-indigo-600/20">
+              <span>Send</span>
+              <i data-lucide="send" class="w-4 h-4"></i>
+            </button>
+          </form>
+        </div>
+      </main>
+    </div>
+  </div>
+
+
+  <!-- ================= ADMIN CONSOLE MODAL ================= -->
+  <div id="admin-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+      <!-- Admin Header -->
+      <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/50">
+        <div class="flex items-center gap-2.5">
+          <div class="p-2 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded-xl">
+            <i data-lucide="shield-alert" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-slate-100 text-base">Administrative & Moderation Panel</h3>
+            <p class="text-xs text-slate-400">Manage user roles, moderation options, system settings, and room permissions</p>
+          </div>
+        </div>
+        <button onclick="toggleAdminPanel()" class="p-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-xl transition">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Admin User Management Content -->
+      <div class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
+        <div>
+          <div class="flex items-center justify-between mb-4">
+            <h4 class="text-sm font-bold text-slate-300 uppercase tracking-wider">User Account Directory & Role Management</h4>
+            <button onclick="openPromoteModal()" class="py-1 px-3 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-500 transition flex items-center gap-1">
+              <i data-lucide="user-plus" class="w-3.5 h-3.5"></i> Promote Account
+            </button>
+          </div>
+
+          <!-- User Management Table -->
+          <div class="overflow-x-auto border border-slate-800 rounded-xl bg-slate-950/40">
+            <table class="w-full text-left text-xs text-slate-300">
+              <thead class="bg-slate-900 text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-800">
+                <tr>
+                  <th class="py-3 px-4">User</th>
+                  <th class="py-3 px-4">Current Role</th>
+                  <th class="py-3 px-4">Status</th>
+                  <th class="py-3 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="admin-user-table-body" class="divide-y divide-slate-800/60">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ================= PROMOTE USER MODAL ================= -->
+  <div id="promote-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 space-y-5 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div class="flex items-center gap-2">
+          <i data-lucide="arrow-up-circle" class="w-5 h-5 text-indigo-400"></i>
+          <h3 class="font-bold text-slate-100 text-base">Promote User Account</h3>
+        </div>
+        <button onclick="closePromoteModal()" class="p-1 text-slate-400 hover:text-white rounded-lg">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <form onsubmit="handlePromoteSubmit(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1">Select User to Promote</label>
+          <select id="promote-user-select" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200 outline-none focus:ring-2 focus:ring-indigo-500">
+            <!-- Dynamically populated -->
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1">Assign New Privilege Level</label>
+          <select id="promote-role-select" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200 outline-none focus:ring-2 focus:ring-indigo-500">
+            <option value="user">Standard User</option>
+            <option value="moderator">Normal Moderator (MOD)</option>
+            <option value="admin">Normal Admin</option>
+            <option value="superadmin">Super Admin / Fast App Admin</option>
+          </select>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closePromoteModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-medium transition">Cancel</button>
+          <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-medium transition">Save & Apply Role</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+
+  <!-- ================= JAVASCRIPT APP LOGIC ================= -->
+  <script>
+    // 1. FIREBASE CONFIGURATION (Your Exact Firebase Credentials)
+    const firebaseConfig = {
+      apiKey: "AIzaSyBdAUM3P0muzlsI0xyLsF2QUN4MyqDYu5U",
+      authDomain: "chat-app-8b456.firebaseapp.com",
+      databaseURL: "https://chat-app-8b456-default-rtdb.firebaseio.com",
+      projectId: "chat-app-8b456",
+      storageBucket: "chat-app-8b456.firebasestorage.app",
+      messagingSenderId: "640126834597",
+      appId: "1:640126834597:web:78160a696bf0d319fd3a4c"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // Application State
+    let authMode = 'user'; // 'user', 'mod', 'admin', 'super'
+    let currentUser = null;
+    let activeRoomId = 'general';
+    let usersData = {};
+    let messagesData = {};
+    let roomsData = {
+      'general': { id: 'general', name: 'general', desc: 'Public discussion room for everyone', public: true }
+    };
+
+    // Initialize Application
+    document.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      setupFirebaseListeners();
+    });
+
+    // Switch Login Tabs
+    function switchAuthTab(mode) {
+      authMode = mode;
+      document.querySelectorAll('#auth-screen button[id^="tab-"]').forEach(btn => {
+        btn.classList.remove('bg-indigo-600', 'text-white', 'shadow-md');
+        btn.classList.add('text-slate-400');
+      });
+
+      const activeBtn = document.getElementById(`tab-${mode}`);
+      activeBtn.classList.add('bg-indigo-600', 'text-white', 'shadow-md');
+      activeBtn.classList.remove('text-slate-400');
+
+      const passHint = document.getElementById('password-hint');
+      if (mode === 'super') {
+        passHint.classList.remove('hidden');
+      } else {
+        passHint.classList.add('hidden');
+      }
+    }
+
+    // Quick Preset Filler
+    function fillPreset(user, pass, mode) {
+      switchAuthTab(mode);
+      document.getElementById('auth-username').value = user;
+      document.getElementById('auth-password').value = pass;
+    }
+
+    // Authentication Form Submit Handler
+    function handleAuthSubmit(event) {
+      event.preventDefault();
+      const username = document.getElementById('auth-username').value.trim();
+      const password = document.getElementById('auth-password').value.trim();
+
+      if (!username) return alert('Please enter a username.');
+
+      let role = 'user';
+      if (authMode === 'mod') role = 'moderator';
+      if (authMode === 'admin') role = 'admin';
+      
+      // Super Admin Key Validation
+      if (authMode === 'super') {
+        if (password !== '@AbdurRahman1920') {
+          alert('Incorrect Fast App Super Admin key passcode!');
+          return;
+        }
+        role = 'superadmin';
+      }
+
+      // User object construction
+      currentUser = {
+        id: 'usr_' + username.toLowerCase().replace(/[^a-z0-9]/g, ''),
+        username: username,
+        role: role,
+        status: 'online',
+        joinedAt: Date.now()
+      };
+
